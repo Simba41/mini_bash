@@ -43,10 +43,10 @@ static ssize_t read_command(char *buf, size_t cap)
     if (n <= 0)
         return n;
 
-    if (buf[n - 1] == '\n')
+    buf[n] = '\0';
+
+    if (n > 0 && buf[n - 1] == '\n')
         buf[n - 1] = '\0';
-    else
-        buf[n] = '\0';
 
     return n;
 }
@@ -57,10 +57,10 @@ static int handle_command(char *buf)
     if (buf[0] == '\0')
         return 0;
 
-    /* built-in: exit */
+    /* built-in: exit (no fork) */
     if (strcmp(buf, "exit") == 0)
     {
-        write(STDOUT_FILENO, "Goodbye!\n", 9);
+        write(STDOUT_FILENO, "Goodbye!\n", sizeof("Goodbye!\n") - 1);
         exit(0);
     }
 
