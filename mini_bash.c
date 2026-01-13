@@ -1,7 +1,8 @@
 #include <unistd.h>     // read, write, chdir, STDIN_FILENO, STDOUT_FILENO
 #include <stdlib.h>     // exit
 #include <string.h>     // strcmp strtok
-
+#include <unistd.h>     // fork, execvp, _exit, write
+#include <sys/wait.h>   // waitpid
 
 #define BUFF_SIZE 4096  // typical Linux page size
 #define MAX_ARGS 64
@@ -28,6 +29,35 @@ static int parse_command(char *buf, char *argv[], int max_args)
 
 
     return argc;
+}
+
+
+static int execute_external(char *argv[])
+{
+    pid_t pid;
+    int status;
+
+    if (argv == NULL || argv[0] == NULL)
+        return 0;
+
+    pid = fork();
+    if (pid < 0)
+        return -1;
+
+    if (pid == 0)
+    {
+        execvp(argv[0], argv);
+        //4) if not found: print "Unknown command: <name>"
+        /* exec failed: command not found */
+        write(STDOUT_FILENO, "Unknown command: ", 17);
+        write(STDOUT_FILENO, argv[0], strlen(argv[0]));
+        write(STDOUT_FILENO, "\n", 1);
+
+        _exit(127);
+    }
+
+    waitpid(pid, &status, 0);
+    return 0;
 }
 
 static void print_prompt(void);
@@ -113,13 +143,14 @@ static int handle_command(char *buf)
         argv[argc] = NULL
     */
 
-
+    //3) external commands: fork + exec + wait
+    execute_external(argv);
     /*
         TODO:
         
         2) built-ins: cd (no fork)
-        3) external commands: fork + exec + wait
-        4) if not found: print "Unknown command: <name>"
+        
+        
     */
 
     return 0;
